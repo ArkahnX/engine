@@ -1,0 +1,22 @@
+{
+	"main": "game/index.html",
+	"name": "fused-holiday",
+	"description": "Fused-Holiday as a standalone executable.",
+	"version": "0.1",
+	"keywords": ["demo", "node-webkit"],
+	"nodejs": true,
+	"single-instance": false,
+	"window": {
+		"icon": "images/Crate.png",
+		"toolbar": true,
+		"width": 1315,
+		"height": 600,
+		"position": "mouse",
+		"min_width": 800,
+		"min_height": 600,
+		"max_width": 1920,
+		"max_height": 1080,
+		"resizable": true,
+		"frame":true
+	}
+}
