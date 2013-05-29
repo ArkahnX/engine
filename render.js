@@ -10,10 +10,10 @@ exports.event.listen("drawMode", function(event) {
 	}
 });
 
-var layers = [];
-var layerNames = [];
-var tileSheets = [];
-var images = [];
+var PIXI = window.PIXI;
+
+var stages = [];
+var renderers = [];
 var domRoot = null;
 var gameRoot = null;
 var que = {};
@@ -22,66 +22,63 @@ var processingQue = false;
 var reProcess = false;
 var animationLoop;
 var document;
-var contexts = [];
 var currentContext;
+var views = {
+	layerNames:[],
+	renderers:[],
+	stages:[]
+};
+var buffers = {
+	layerNames:[],
+	renderers:[],
+	stages:[]
+};
+var current = {
+	view: {
+		stage: null,
+		renderer: null
+	},
+	buffer: {
+		stage: null,
+		renderer: null
+	}
+};
 var loop = false;
 var buffer, bufferContext;
 
+
+// adds an element to the screen.
 exports.appendGameDOM = function(name, id, optionalParent) {
 	var node = makeNode(name, id);
 	addToQue(optionalParent || "root", node, "game");
 };
 
-exports.buffer = function(callback) {
-	callback(bufferContext)
-};
-
-function newImage(tilesheet, callback) {
-	var index = tileSheets.indexOf(tilesheet);
-	if (index > -1 && images[index] !== null) {
-		return callback(images[index]);
-	}
-	tileSheets.push(tilesheet);
-	var image = new window.Image();
-	image.onload = function() {
-		var index = tileSheets.indexOf(image.getAttribute("data-src"));
-		images[index] = this;
-		callback(this);
-	};
-	image.src = tilesheet;
-	image.setAttribute("src", tilesheet);
-	image.setAttribute("data-src", tilesheet);
-	images.push(null);
-}
-
-function makeLayer(name) {
-	layerNames.push(name);
-	layers.push(null);
-	contexts.push(null);
-	return layers.length;
-}
-
-function getContext(index) {
-	if (contexts[index] === null) {
-		var canvas = layers[index];
-		contexts[index] = canvas.getContext("2d");
-	}
-	currentContext = contexts[index];
-	currentContext.clearRect(0, 0, 1312, 400);
+function getView(index) {
+	current.view.stage = views.stages[index];
+	current.buffer.stage = buffers.stages[index];
+	current.view.renderer = views.renderers[index];
+	current.buffer.renderer = buffers.renderers[index];
 }
 
 exports.pickLayer = function(name) {
-	var index = layerNames.indexOf(name);
-	return getContext(index);
+	var index = views.layerNames.indexOf(name);
+	return getView(index);
 }
 
 exports.readyTileset = function(tileSet, callback) {
-	newImage(tileSet, callback);
+	if (PIXI.Texture.fromImage(tileset).baseTexture.hasLoaded) {
+		callback();
+	} else {
+		var loader = new PIXI.AssetLoader([tileSet]);
+		loader.onComplete = callback;
+		loader.load();
+	}
 }
 
 exports.setBufferSize = function(width, height) {
-	buffer.width = width;
-	buffer.height = height;
+	for(var i=0;i<views.stages;i++) {
+		views.renderers[i].resize(width,height);
+	}
 };
 
 exports.isReady = function(fn) {
@@ -92,43 +89,66 @@ exports.isReady = function(fn) {
 	}
 };
 
-exports.draw = function(tilesheet, startx, starty, startw, starth, drawx, drawy, draww, drawh) {
-	var index = tileSheets.indexOf(tilesheet);
-	var image = images[index];
-	currentContext.drawImage(image, startx, starty, startw, starth, drawx, drawy, draww, drawh);
-	// newImage(tilesheet, function(image) {
-	// console.log(drawx)
-	// currentContext.font = "12px sans-serif";
-	// currentContext.textBaseline = "top";
-	// currentContext.fillText(drawx/16+","+drawy/16, drawx, drawy);
-	// });
+exports.draw = function(tilesheet, startX, startY, startW, startH, drawX, drawY, drawW, drawH) {
+	var texture = PIXI.Texture.fromImage(tilesheet);
+	//fixme
+	//texture.setFrame(new PIXI.Rectangle(startX,startY,startW,startH));
+    texture.setFrame(new PIXI.Rectangle(0,0,1,1));
+    var sprite = new PIXI.Sprite(texture);
+
+    sprite.position.x = drawX;
+    sprite.position.y = drawY;
+    sprite.width = drawW;
+    sprite.height = drawH;
+	current.view.stage.addChild(sprite);
 };
 
 exports.drawFromBuffer = function(startX, startY, drawX, drawY, width, height) {
-	if (!currentContext) {
-		getContext(0);
+	if (!current.buffer.stage) {
+		getView(0);
 	}
-	currentContext.drawImage(buffer, startX, startY, width, height, drawX, drawY, width, height);
+	var texture = PIXI.Texture.fromCanvas(current.buffer.renderer.view);
+	//fixme
+	//texture.setFrame(new PIXI.Rectangle(startX,startY,startW,startH));
+    texture.setFrame(new PIXI.Rectangle(0,0,1,1));
+    var sprite = new PIXI.Sprite(texture);
+
+    sprite.position.x = drawX;
+    sprite.position.y = drawY;
+    sprite.width = drawW;
+    sprite.height = drawH;
+	current.view.stage.addChild(sprite);
 };
 
-exports.drawBuffer = function(tilesheet, startx, starty, startw, starth, drawx, drawy, draww, drawh) {
-	var index = tileSheets.indexOf(tilesheet);
-	var image = images[index];
-	// console.log(drawx,drawy)
-	bufferContext.drawImage(image, startx, starty, startw, starth, drawx, drawy, draww, drawh);
-	// newImage(tilesheet, function(image) {
-	// console.log(drawx)
-	// currentContext.font = "12px sans-serif";
-	// currentContext.textBaseline = "top";
-	// currentContext.fillText(drawx/16+","+drawy/16, drawx, drawy);
-	// });
+exports.drawBuffer = function(tilesheet, startX, startY, startW, startH, drawX, drawY, drawW, drawH) {
+	var texture = PIXI.Texture.fromImage(tilesheet);
+	bufferContext.drawImage(image, startX, startY, startW, startH, drawX, drawY, drawW, drawH);
+
+	//fixme
+	//texture.setFrame(new PIXI.Rectangle(startX,startY,startW,startH));
+    texture.setFrame(new PIXI.Rectangle(0,0,1,1));
+    var sprite = new PIXI.Sprite(texture);
+
+    sprite.position.x = drawX;
+    sprite.position.y = drawY;
+    sprite.width = drawW;
+    sprite.height = drawH;
+	current.buffer.stage.addChild(sprite);
 };
+
+
 
 exports.createLayer = function(name, width, height) {
-	if (layerNames.indexOf(name) === -1) {
-		var id = makeLayer(name);
-		var canvas = makeNode("canvas", name, width, height);
-		addToQue("canvasHolder", canvas, "engine");
+	if (views.layerNames.indexOf(name) === -1) {
+		var id = views.layerNames.length;
+		buffers.layerNames.push(name);
+		views.layerNames.push(name);
+		buffers.stages.push(new PIXI.Stage(0x000000));
+		views.stages.push(new PIXI.Stage(0x000000));
+		buffers.renderers.push(PIXI.autoDetectRenderer(width, height));
+		views.renderers.push(PIXI.autoDetectRenderer(width, height));
+
+		addToQue("canvasHolder", views.renderers[id], "engine");
 	}
 };
 
@@ -148,11 +168,11 @@ function animate() {
 	if (!loop) {
 		return false;
 	}
-	if (currentContext) {
-		currentContext.clearRect(0, 0, 1312, 400);
-	}
 	for (var attr in fns) {
-		fns[attr](currentContext);
+		fns[attr](current);
+	}
+	for(var i=0;i<views.stages;i++) {
+		views.renderers[i].render(views.stages[i]);
 	}
 	window.meter.tick();
 	window.requestAnimationFrame(animate);
@@ -186,6 +206,7 @@ function addToQue(name, item, root) {
 	if (!que[name]) {
 		que[name] = document.createDocumentFragment();
 	}
+	console.log(name, item)
 	que[name].appendChild(item);
 	processQue(root);
 }
@@ -207,11 +228,6 @@ function processQue(root) {
 			}
 			document.getElementById(attr).appendChild(que[attr]);
 			delete que[attr];
-		}
-		for (var i = 0; i < layers.length; i++) {
-			if (layers[i] === null) {
-				layers[i] = document.getElementById(layerNames[i]);
-			}
 		}
 		processingQue = false;
 	}
@@ -289,8 +305,6 @@ contentLoaded(window, function() {
 	domRoot.innerHTML = "";
 	gameRoot = document.getElementById("game");
 	gameRoot.innerHTML = "";
-	buffer = document.createElement("canvas");
-	bufferContext = buffer.getContext("2d");
 	domReady = true;
 	exports.event.triggerPermanent("ready");
 	processQue();
