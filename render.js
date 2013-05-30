@@ -23,15 +23,21 @@ var reProcess = false;
 var animationLoop;
 var document;
 var currentContext;
+var textures = {};
+var sprites = {};
 var views = {
-	layerNames:[],
-	renderers:[],
-	stages:[]
+	layerNames: [],
+	renderers: [],
+	stages: []
 };
 var buffers = {
-	layerNames:[],
-	renderers:[],
-	stages:[]
+	size: {
+		width: 0,
+		height: 0
+	},
+	layerNames: [],
+	renderers: [],
+	stages: []
 };
 var current = {
 	view: {
@@ -66,7 +72,7 @@ exports.pickLayer = function(name) {
 }
 
 exports.readyTileset = function(tileSet, callback) {
-	if (PIXI.Texture.fromImage(tileset).baseTexture.hasLoaded) {
+	if (PIXI.Texture.fromImage(tileSet).baseTexture.hasLoaded) {
 		callback();
 	} else {
 		var loader = new PIXI.AssetLoader([tileSet]);
@@ -76,8 +82,10 @@ exports.readyTileset = function(tileSet, callback) {
 }
 
 exports.setBufferSize = function(width, height) {
-	for(var i=0;i<views.stages;i++) {
-		views.renderers[i].resize(width,height);
+	buffers.size.width = width;
+	buffers.size.height = height;
+	for (var i = 0; i < buffers.renderers.length; i++) {
+		buffers.renderers[i].resize(width, height);
 	}
 };
 
@@ -89,17 +97,36 @@ exports.isReady = function(fn) {
 	}
 };
 
-exports.draw = function(tilesheet, startX, startY, startW, startH, drawX, drawY, drawW, drawH) {
-	var texture = PIXI.Texture.fromImage(tilesheet);
-	//fixme
-	//texture.setFrame(new PIXI.Rectangle(startX,startY,startW,startH));
-    texture.setFrame(new PIXI.Rectangle(0,0,1,1));
-    var sprite = new PIXI.Sprite(texture);
+exports.baseTexture = function(tileSheet) {
+	if (!textures[tileSheet]) {
+		textures[tileSheet] = PIXI.Texture.fromImage(tileSheet).baseTexture;
+	}
+	return textures[tileSheet];
+};
 
-    sprite.position.x = drawX;
-    sprite.position.y = drawY;
-    sprite.width = drawW;
-    sprite.height = drawH;
+exports.texture = function(tileSheet, x, y, width, height) {
+	var name = tileSheet + "-" + x + "-" + y + "-" + width + "-" + height;
+	if (!sprites[name]) {
+		sprites[name] = new PIXI.Texture(exports.baseTexture(tileSheet), new PIXI.Rectangle(x, y, width, height));
+	}
+	return sprites[name];
+};
+
+exports.draw = function(tileSheet, startX, startY, startW, startH, drawX, drawY, drawW, drawH) {
+	if (!current.buffer.stage) {
+		getView(0);
+	}
+	if (typeof tileSheet === "string") {
+		var texture = new PIXI.Texture(exports.baseTexture(tileSheet), new PIXI.Rectangle(startX, startY, startW, startH));
+	} else {
+		var texture = tileSheet;
+	}
+	var sprite = new PIXI.Sprite(texture);
+
+	sprite.position.x = drawX;
+	sprite.position.y = drawY;
+	sprite.width = drawW;
+	sprite.height = drawH;
 	current.view.stage.addChild(sprite);
 };
 
@@ -109,30 +136,33 @@ exports.drawFromBuffer = function(startX, startY, drawX, drawY, width, height) {
 	}
 	var texture = PIXI.Texture.fromCanvas(current.buffer.renderer.view);
 	//fixme
-	//texture.setFrame(new PIXI.Rectangle(startX,startY,startW,startH));
-    texture.setFrame(new PIXI.Rectangle(0,0,1,1));
-    var sprite = new PIXI.Sprite(texture);
+	console.log(views, buffers, current)
+	texture.setFrame(new PIXI.Rectangle(startX, startY, width, height));
+	var sprite = new PIXI.Sprite(texture);
 
-    sprite.position.x = drawX;
-    sprite.position.y = drawY;
-    sprite.width = drawW;
-    sprite.height = drawH;
+	sprite.position.x = drawX;
+	sprite.position.y = drawY;
+	sprite.width = width;
+	sprite.height = height;
 	current.view.stage.addChild(sprite);
 };
 
-exports.drawBuffer = function(tilesheet, startX, startY, startW, startH, drawX, drawY, drawW, drawH) {
-	var texture = PIXI.Texture.fromImage(tilesheet);
-	bufferContext.drawImage(image, startX, startY, startW, startH, drawX, drawY, drawW, drawH);
+exports.drawBuffer = function(tileSheet, startX, startY, startW, startH, drawX, drawY, drawW, drawH) {
+	if (!current.buffer.stage) {
+		getView(0);
+	}
+	if (typeof tileSheet === "string") {
+		var texture = new PIXI.Texture(exports.baseTexture(tileSheet), new PIXI.Rectangle(startX, startY, startW, startH));
+	} else {
+		var texture = tileSheet;
+	}
+	var sprite = new PIXI.Sprite(texture);
 
-	//fixme
-	//texture.setFrame(new PIXI.Rectangle(startX,startY,startW,startH));
-    texture.setFrame(new PIXI.Rectangle(0,0,1,1));
-    var sprite = new PIXI.Sprite(texture);
-
-    sprite.position.x = drawX;
-    sprite.position.y = drawY;
-    sprite.width = drawW;
-    sprite.height = drawH;
+	sprite.position.x = drawX;
+	sprite.position.y = drawY;
+	sprite.width = drawW;
+	sprite.height = drawH;
+	// console.log(sprite, texture)
 	current.buffer.stage.addChild(sprite);
 };
 
@@ -143,12 +173,13 @@ exports.createLayer = function(name, width, height) {
 		var id = views.layerNames.length;
 		buffers.layerNames.push(name);
 		views.layerNames.push(name);
-		buffers.stages.push(new PIXI.Stage(0x000000));
-		views.stages.push(new PIXI.Stage(0x000000));
-		buffers.renderers.push(PIXI.autoDetectRenderer(width, height));
+		buffers.stages.push(new PIXI.Stage(0xFFFFFF));
+		views.stages.push(new PIXI.Stage(0xFFFFFF));
+		buffers.renderers.push(PIXI.autoDetectRenderer(buffers.size.width, buffers.size.height));
 		views.renderers.push(PIXI.autoDetectRenderer(width, height));
 
-		addToQue("canvasHolder", views.renderers[id], "engine");
+		addToQue("canvasHolder", views.renderers[id].view, "engine");
+		// addToQue("canvasHolder", buffers.renderers[id].view, "hidden");
 	}
 };
 
@@ -171,7 +202,7 @@ function animate() {
 	for (var attr in fns) {
 		fns[attr](current);
 	}
-	for(var i=0;i<views.stages;i++) {
+	for (var i = 0; i < views.stages.length; i++) {
 		views.renderers[i].render(views.stages[i]);
 	}
 	window.meter.tick();
@@ -206,7 +237,6 @@ function addToQue(name, item, root) {
 	if (!que[name]) {
 		que[name] = document.createDocumentFragment();
 	}
-	console.log(name, item)
 	que[name].appendChild(item);
 	processQue(root);
 }
