@@ -1,9 +1,13 @@
+// deprecated
+
 var path = require("path");
 var root = path.dirname(global.require.main.filename);
 var config = require(path.resolve(root, "engine/config.js"));
 var CONST = require(path.resolve(root, "engine/constants.js"));
 var Event = require(path.resolve(root, "engine/event.js")).Event;
 exports.event = new Event(["parseMapChunk", "getMapTile", "modifyTile"], ["registerMapConverter"]);
+var Callback = require(path.resolve(root, "engine/callback.js"));
+exports.parse
 
 var mapCache = {};
 

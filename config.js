@@ -1,8 +1,8 @@
 var path = require("path");
 var root = path.dirname(global.require.main.filename);
 var readwrite = require(path.resolve(root, "engine/readwrite.js"));
-var Event = require(path.resolve(root, "engine/event.js")).Event;
-exports.event = new Event(["valueChanged"]);
+var Callback = require(path.resolve(root, "engine/callback.js"));
+exports.onValueChanged = Callback.create("onValueChanged");
 
 var configuration = {};
 
@@ -51,13 +51,15 @@ exports.create = function(defaultData, name, callback) {
 	readwrite.save(JSON.stringify(defaultData), "config-" + name, callback);
 };
 
+function Values(old,newVal,name) {
+	this.oldValue = old;
+	this.newValue = newVal;
+	this.valueName = name;
+};
+
 exports.setValue = function(config, name, value, callback) {
 	exports.getConfig(config, function(data) {
-		exports.event.trigger("valueChanged",exports,{
-			oldValue:config[name],
-			newValue:value,
-			valueName:name
-		});
+		exports.onValueChanged.trigger(new Values(config[name],value,name));
 		config[name] = value;
 	});
 };

@@ -2,12 +2,12 @@ var path = require("path");
 var root = path.dirname(global.require.main.filename);
 var readwrite = require(path.resolve(root, "engine/readwrite.js"));
 var core = require(path.resolve(root, "engine/core.js"));
-var Event = require(path.resolve(root, "engine/Event.js")).Event;
+var Callback = require(path.resolve(root, "engine/callback.js"));
 var assets = {};
 var directories = {};
 var built = {};
 
-exports.event = new Event(["assetsReady"]);
+exports.onAssetsReady = Callback.create("onAssetsReady",true);
 
 function addAsset(modPath, manifest, callback) {
 	assets[manifest.id] = {
@@ -158,7 +158,7 @@ function setup() {
 	console.timeEnd('buildMods');
 	console.groupEnd();
 	console.timeEnd('assetLoaders');
-	exports.event.triggerPermanent("assetsReady");
+	exports.onAssetsReady.trigger();
 }
 
 function build(assetId, parentId) {
@@ -239,7 +239,7 @@ exports.get = function(id, component) {
 					if (component === "methods") {
 						return built[id].methods || null;
 					}
-					if(built[id].self[component]){
+					if (built[id].self[component]) {
 						return built[id].self[component];
 					}
 					built[id].self;

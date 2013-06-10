@@ -16,7 +16,7 @@ var numberList = function numberList(namesList, valuesList, grow, float, negativ
 	} else {
 		this.maxSize = valuesList;
 	}
-	maxLength = this.maxSize.toString().length;
+	maxLength = (this.maxSize + "").length;
 	this.length = namesList.length;
 	if (float) {
 		if (maxLength <= this.maxLength.i32 && this.maxSize <= this.maxValue.i32) {
@@ -250,32 +250,13 @@ exports.object = function(namesList, valuesList) {
 	return exports.create(namesList, valuesList, true, false, false);
 };
 
-function indexOf(array, item) {
-	for (var i = 0, l = array.length; i < l; i++) {
-		if (array[i] === item) {
-			return i;
-		}
-	}
-	return -1;
-}
-
-function array_unique(arr) {
-  var result = [];
-  for (var i = 0; i < arr.length; i++) {
-    if (indexOf(result,arr[i]) === -1) {
-      result.splice(0, 0, arr[i]);
-    }
-  }
-  return result;
-}
-
 exports.inherit = function(namesList, valuesList, parentList) {
 	"use strict";
 	namesList = parentList.namesList.concat(namesList);
-		namesList = array_unique(namesList);
+	namesList = namesList.unique();
 	if (Array.isArray(valuesList)) {
 		valuesList = parentList.valuesList.concat(valuesList);
-		valuesList = array_unique(valuesList);
+		valuesList = valuesList.unique();
 	} else {
 		if (parentList.maxSize > valuesList) {
 			valuesList = parentList.maxSize;

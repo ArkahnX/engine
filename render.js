@@ -1,10 +1,12 @@
 var path = require("path");
 var root = path.dirname(global.require.main.filename);
 var CONST = require(path.resolve(root, "engine/constants.js"));
-var Event = require(path.resolve(root, "engine/event.js")).Event;
-exports.event = new Event(["drawMode", "frame", "ready"]);
+var Callback = require(path.resolve(root, "engine/callback.js"));
+exports.onDrawMode = Callback.create("onDrawMode");
+exports.onFrame = Callback.create("onFrame");
+exports.onReady = Callback.create("onReady",true);
 
-exports.event.listen("drawMode", function(event) {
+exports.onDrawMode.listen(function(event) {
 	if (event.name && event.size) {
 		CONST.set(event.name, event.size);
 	}
@@ -90,11 +92,7 @@ exports.setBufferSize = function(width, height) {
 };
 
 exports.isReady = function(fn) {
-	if (domReady) {
-		fn();
-	} else {
-		exports.event.listen("ready", fn);
-	}
+	exports.onReady.listen(fn);
 };
 
 exports.baseTexture = function(tileSheet) {
@@ -301,7 +299,7 @@ function contentLoaded(win, fn) {
 		init = function(e) {
 			if (e.type == 'readystatechange' && doc.readyState != 'complete') return;
 			(e.type == 'load' ? win : doc)[rem](pre + e.type, init, false);
-			if (!done && (done = true)) fn.call(win, e.type || e);
+			if (!done && (done = true)) fn();
 		},
 
 		poll = function() {
@@ -314,7 +312,7 @@ function contentLoaded(win, fn) {
 			init('poll');
 		};
 
-	if (doc.readyState == 'complete') fn.call(win, 'lazy');
+	if (doc.readyState == 'complete') fn();
 	else {
 		if (doc.createEventObject && root.doScroll) {
 			try {
@@ -336,6 +334,6 @@ contentLoaded(window, function() {
 	gameRoot = document.getElementById("game");
 	gameRoot.innerHTML = "";
 	domReady = true;
-	exports.event.triggerPermanent("ready");
+	exports.onReady.trigger();
 	processQue();
 });
