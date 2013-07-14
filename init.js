@@ -37,7 +37,7 @@ var meter = new FPSMeter({
 	history: 20 // How many history states to show in a graph.
 });
 
-var CONST = nodeRequire("engine/constants.js");
+// var CONST = nodeRequire("engine/constants.js");
 var extensions = nodeRequire("engine/extensions.js");
 
 //define the node require function here for use in window and global.
