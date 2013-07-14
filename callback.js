@@ -8,7 +8,7 @@ var customEvent = function customEvent(name, permanent) {
 	this.name = uniqueId()+name;
 	this.permanent = permanent || this.permanent;
 
-	window.document.addEventListener("customEvent-" + name, function(event) {
+	window.document.addEventListener("customEvent-" + this.name, function(event) {
 		event.detail.handler(event.detail.eventData);
 	});
 };
