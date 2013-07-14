@@ -4,7 +4,7 @@ var CONST = require(path.resolve(root, "engine/constants.js"));
 var Callback = require(path.resolve(root, "engine/callback.js"));
 exports.onDrawMode = Callback.create("onDrawMode");
 exports.onFrame = Callback.create("onFrame");
-exports.onReady = Callback.create("onReady",true);
+exports.onReady = Callback.create("onReady", true);
 
 exports.onDrawMode.listen(function(event) {
 	if (event.name && event.size) {
@@ -25,8 +25,8 @@ var reProcess = false;
 var animationLoop;
 var document;
 var currentContext;
+var baseTextures = {};
 var textures = {};
-var sprites = {};
 var views = {
 	layerNames: [],
 	renderers: [],
@@ -53,6 +53,8 @@ var current = {
 };
 var loop = false;
 var buffer, bufferContext;
+
+var rectanglePool = [];
 
 
 // adds an element to the screen.
@@ -83,32 +85,46 @@ exports.readyTileset = function(tileSet, callback) {
 	}
 }
 
-exports.setBufferSize = function(width, height) {
-	buffers.size.width = width;
-	buffers.size.height = height;
-	for (var i = 0; i < buffers.renderers.length; i++) {
-		buffers.renderers[i].resize(width, height);
-	}
-};
-
 exports.isReady = function(fn) {
 	exports.onReady.listen(fn);
 };
 
-exports.baseTexture = function(tileSheet) {
-	if (!textures[tileSheet]) {
-		textures[tileSheet] = PIXI.Texture.fromImage(tileSheet).baseTexture;
-	}
-	return textures[tileSheet];
+exports.newBaseTexture = function(tileSheet) {
+	return PIXI.Texture.fromImage(tileSheet).baseTexture;
 };
 
-exports.texture = function(tileSheet, x, y, width, height) {
-	var name = tileSheet + "-" + x + "-" + y + "-" + width + "-" + height;
-	if (!sprites[name]) {
-		sprites[name] = new PIXI.Texture(exports.baseTexture(tileSheet), new PIXI.Rectangle(x, y, width, height));
+exports.getBaseTexture = function(tileSheet) {
+	if (!baseTextures[tileSheet]) {
+		baseTextures[tileSheet] = render.newBaseTexture(tileSheet);
 	}
-	return sprites[name];
+	return baseTextures[tileSheet];
 };
+
+exports.getTexture = function(tileSheet, x, y, width, height) {
+	var name = tileSheet + "-" + x + "-" + y + "-" + width + "-" + height;
+	if (!textures[name]) {
+		textures[name] = render.newTexture(exports.getBaseTexture(tileSheet), x, y, width, height);
+	}
+	return textures[name];
+};
+exports.newTexture = function(baseTexture, x, y, width, height) {
+	return new PIXI.Texture(baseTexture, exports.rectangle(x, y, width, height));
+};
+
+exports.rectangle = function(x, y, width, height) {
+	var rectangle;
+	if (rectanglePool.length) {
+		rectangle = rectanglePool.pop();
+		rectangle.x = x;
+		rectangle.y = y;
+		rectangle.width = width;
+		rectangle.height = height;
+	} else {
+		rectangle = new PIXI.Rectangle(x, y, width, height);
+	}
+	return rectangle;
+};
+
 
 exports.draw = function(tileSheet, startX, startY, startW, startH, drawX, drawY, drawW, drawH) {
 	if (!current.buffer.stage) {
