@@ -2,6 +2,14 @@
 process.on("uncaughtException", function(err) {
 	console.error(err.message, err.stack);
 });
+
+// set a shortcut function for global.require
+var path = global.require("path");
+var root = path.dirname(global.require.main.filename);
+window.nodeRequire = global.nodeRequire = function(file) {
+	return global.require(path.resolve(root, file));
+};
+
 var meter = new FPSMeter({
 	interval: 60, // Update interval in milliseconds.
 	smoothing: 10, // Spike smoothing strength. 1 means no smoothing.
@@ -28,11 +36,7 @@ var meter = new FPSMeter({
 	graph: 1, // Whether to show history graph.
 	history: 20 // How many history states to show in a graph.
 });
-var path = global.require("path");
-var root = path.dirname(global.require.main.filename);
-window.nodeRequire = global.nodeRequire = function(file) {
-	return global.require(path.resolve(root, file));
-};
+
 var CONST = nodeRequire("engine/constants.js");
 var extensions = nodeRequire("engine/extensions.js");
 
