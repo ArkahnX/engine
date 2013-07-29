@@ -194,8 +194,6 @@ function build(assetId, parentId) {
 										if (err) {
 											throw err;
 										}
-										console.log('OK: ' + filename);
-										console.log(data);
 										built[assetId].self[thisModAsset] = data;
 									});
 								} else if (thisType === "media") { // for media we just want the path.
