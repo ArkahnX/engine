@@ -7,7 +7,7 @@ var assets = {};
 var directories = {};
 var built = {};
 
-exports.onAssetsReady = Callback.create("onAssetsReady",true);
+exports.onAssetsReady = Callback.create("onAssetsReady", true);
 
 function addAsset(modPath, manifest, callback) {
 	assets[manifest.id] = {
@@ -187,7 +187,23 @@ function build(assetId, parentId) {
 							var thisModAsset = thisAssets[thisType][e];
 							console.log(thisModAsset)
 							built[assetId][thisType][thisModAsset] = main_file[thisModAsset];
-							built[assetId].self[thisModAsset] = main_file[thisModAsset];
+							if (!main_file[thisModAsset]) { // if we dont have the asset in the main file, copy the data over.
+								if (thisType === "templates" || thisType === "attributes") { // if its a template or attributes JSON we want the ascii data.
+									var fs = require("fs");
+									fs.readFile(path.resolve(root, directories[assetId], thisModAsset), 'utf8', function(err, data) {
+										if (err) {
+											throw err;
+										}
+										console.log('OK: ' + filename);
+										console.log(data);
+										built[assetId].self[thisModAsset] = data;
+									});
+								} else if (thisType === "media") { // for media we just want the path.
+									built[assetId].self[thisModAsset] = path.resolve(root, directories[assetId], thisModAsset);
+								}
+							} else {
+								built[assetId].self[thisModAsset] = main_file[thisModAsset];
+							}
 						}
 					} else {
 						console.log("Built type ", thisType, " already.");
