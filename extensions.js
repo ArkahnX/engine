@@ -161,6 +161,34 @@ function setup() {
 	exports.onAssetsReady.trigger();
 }
 
+function addFiles(thisModAsset, thisType, assetId, main_file) {
+	console.log(thisModAsset)
+	built[assetId][thisType][thisModAsset] = main_file[thisModAsset];
+	if (!main_file[thisModAsset]) { // if we dont have the asset in the main file, copy the data over.
+		var fs = require("fs");
+		// make sure the file exists first, throw a human readable error otherwise.
+		var fileName = path.resolve(root, directories[assetId], thisModAsset);
+		fs.exists(fileName, function(exists) {
+			if (exists) {
+				if (thisType === "templates" || thisType === "attributes") { // if its a template or attributes JSON we want the ascii data.
+					fs.readFile(fileName, 'utf8', function(err, data) {
+						if (err) {
+							throw err;
+						}
+						built[assetId].self[thisModAsset] = data;
+					});
+				} else if (thisType === "media") { // for media we just want the path.
+					built[assetId].self[thisModAsset] = path.resolve(root, directories[assetId], thisModAsset);
+				}
+			} else {
+				console.error("You forgot to include file: '", thisModAsset, "' in mod: '", directories[assetId], "' which was referenced in the manifest file.")
+			}
+		});
+	} else {
+		built[assetId].self[thisModAsset] = main_file[thisModAsset];
+	}
+}
+
 function build(assetId, parentId) {
 	var rootModAssets = assets[assetId];
 	var thisAssets = rootModAssets.manifest.assets;
@@ -185,31 +213,7 @@ function build(assetId, parentId) {
 						built[assetId][thisType] = {};
 						for (var e = 0; e < thisAssets[thisType].length; e++) {
 							var thisModAsset = thisAssets[thisType][e];
-							console.log(thisModAsset)
-							built[assetId][thisType][thisModAsset] = main_file[thisModAsset];
-							if (!main_file[thisModAsset]) { // if we dont have the asset in the main file, copy the data over.
-								var fs = require("fs");
-								// make sure the file exists first, throw a human readable error otherwise.
-								var fileName = path.resolve(root, directories[assetId], thisModAsset);
-								fs.exists(fileName, function(exists) {
-									if (exists) {
-										if (thisType === "templates" || thisType === "attributes") { // if its a template or attributes JSON we want the ascii data.
-											fs.readFile(fileName, 'utf8', function(err, data) {
-												if (err) {
-													throw err;
-												}
-												built[assetId].self[thisModAsset] = data;
-											});
-										} else if (thisType === "media") { // for media we just want the path.
-											built[assetId].self[thisModAsset] = path.resolve(root, directories[assetId], thisModAsset);
-										}
-									} else {
-										console.error("You forgot to include file: '",thisModAsset,"' in mod: '",directories[assetId],"' which was referenced in the manifest file.")
-									}
-								});
-							} else {
-								built[assetId].self[thisModAsset] = main_file[thisModAsset];
-							}
+							addFiles(thisModAsset, thisType, assetId, main_file);
 						}
 					} else {
 						console.log("Built type ", thisType, " already.");
