@@ -188,17 +188,24 @@ function build(assetId, parentId) {
 							console.log(thisModAsset)
 							built[assetId][thisType][thisModAsset] = main_file[thisModAsset];
 							if (!main_file[thisModAsset]) { // if we dont have the asset in the main file, copy the data over.
-								if (thisType === "templates" || thisType === "attributes") { // if its a template or attributes JSON we want the ascii data.
-									var fs = require("fs");
-									fs.readFile(path.resolve(root, directories[assetId], thisModAsset), 'utf8', function(err, data) {
-										if (err) {
-											throw err;
+								var fs = require("fs");
+								// make sure the file exists first, throw a human readable error otherwise.
+								fs.exists(file, function(exists) {
+									if (exists) {
+										if (thisType === "templates" || thisType === "attributes") { // if its a template or attributes JSON we want the ascii data.
+											fs.readFile(path.resolve(root, directories[assetId], thisModAsset), 'utf8', function(err, data) {
+												if (err) {
+													throw err;
+												}
+												built[assetId].self[thisModAsset] = data;
+											});
+										} else if (thisType === "media") { // for media we just want the path.
+											built[assetId].self[thisModAsset] = path.resolve(root, directories[assetId], thisModAsset);
 										}
-										built[assetId].self[thisModAsset] = data;
-									});
-								} else if (thisType === "media") { // for media we just want the path.
-									built[assetId].self[thisModAsset] = path.resolve(root, directories[assetId], thisModAsset);
-								}
+									} else {
+										console.error("You forgot to include file: '",thisModAsset,"' in mod: '",directories[assetId],"'")
+									}
+								});
 							} else {
 								built[assetId].self[thisModAsset] = main_file[thisModAsset];
 							}
