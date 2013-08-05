@@ -190,10 +190,11 @@ function build(assetId, parentId) {
 							if (!main_file[thisModAsset]) { // if we dont have the asset in the main file, copy the data over.
 								var fs = require("fs");
 								// make sure the file exists first, throw a human readable error otherwise.
-								fs.exists(file, function(exists) {
+								var fileName = path.resolve(root, directories[assetId], thisModAsset);
+								fs.exists(fileName, function(exists) {
 									if (exists) {
 										if (thisType === "templates" || thisType === "attributes") { // if its a template or attributes JSON we want the ascii data.
-											fs.readFile(path.resolve(root, directories[assetId], thisModAsset), 'utf8', function(err, data) {
+											fs.readFile(fileName, 'utf8', function(err, data) {
 												if (err) {
 													throw err;
 												}
