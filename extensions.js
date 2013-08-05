@@ -204,7 +204,7 @@ function build(assetId, parentId) {
 											built[assetId].self[thisModAsset] = path.resolve(root, directories[assetId], thisModAsset);
 										}
 									} else {
-										console.error("You forgot to include file: '",thisModAsset,"' in mod: '",directories[assetId],"'")
+										console.error("You forgot to include file: '",thisModAsset,"' in mod: '",directories[assetId],"' which was referenced in the manifest file.")
 									}
 								});
 							} else {
